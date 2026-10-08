@@ -1,0 +1,595 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Room Reserve - School Room Reservation System</title>
+<meta name="description" content="Reserve classrooms, laboratories and meeting rooms across campus.">
+<meta name="theme-color" content="#106d3c">
+<style>
+:root{color-scheme:light}
+*{box-sizing:border-box;margin:0;padding:0;font-family:Arial,sans-serif}
+body{background:#f4f6f9;color:#333}
+button{border:none;padding:12px 18px;border-radius:7px;cursor:pointer;font-weight:bold;transition:all .2s}
+button:focus-visible,input:focus-visible,select:focus-visible,textarea:focus-visible,.building-card:focus-visible,.room-card:focus-visible{outline:3px solid #17a65a;outline-offset:2px}
+label{display:block;margin:14px 0 6px;font-weight:bold}
+input,select,textarea{width:100%;padding:12px;border:1px solid #ccc;border-radius:7px;font-size:14px;background:#fff;color:#333}
+input::placeholder,textarea::placeholder{color:#8a8f98}
+textarea{resize:vertical;min-height:80px}
+.primary-btn{width:100%;background:#17a65a;color:#fff;margin-top:20px}
+.primary-btn:hover{background:#0d8539}
+.error{color:#d93025;margin-top:10px;text-align:center}
+/* login */
+.auth{min-height:100vh;display:flex;justify-content:center;align-items:center;background:#fff}
+.auth-box{width:420px;max-width:90%;background:#fff;padding:35px;border-radius:15px;border:1px solid #dfe5e1;box-shadow:0 10px 30px rgba(0,0,0,.12)}
+.auth-box h1{text-align:center;color:#17a65a;margin-bottom:8px}
+.subtitle{text-align:center;color:#777;margin-bottom:20px}
+.auth-link{text-align:center;margin-top:18px;color:#666}
+.auth-link button{background:none;color:#17a65a;padding:0}
+.auth-link button:hover{text-decoration:underline}
+/* app shell */
+#app{display:none;min-height:100vh}
+.sidebar{position:fixed;top:0;left:0;width:240px;height:100vh;background:#106d3c;color:#fff;padding:25px 15px;transition:transform .3s;z-index:1000;box-shadow:4px 0 18px rgba(0,0,0,.12)}
+#app.collapsed .sidebar{transform:translateX(-100%)}
+.sidebar h2{text-align:center;margin:62px 0 24px}
+.sidebar .nav{width:100%;margin-bottom:8px;background:transparent;color:#fff;text-align:left}
+.sidebar .nav:hover,.sidebar .nav.on{background:rgba(255,255,255,.18)}
+.logout{position:absolute;right:14px;bottom:16px;background:#d93025;color:#fff;padding:9px 14px}
+.logout:hover{background:#b9251d}
+.toggle{position:fixed;top:18px;left:18px;width:44px;height:44px;padding:0;background:#106d3c;z-index:1100;display:none;flex-direction:column;align-items:center;justify-content:center;gap:5px;box-shadow:0 3px 10px rgba(0,0,0,.18)}
+.toggle span{display:block;width:22px;height:2px;background:#fff;border-radius:2px}
+.content{margin-left:240px;padding:30px;transition:margin-left .3s}
+#app.collapsed .content{margin-left:0}
+.topbar{background:#fff;padding:18px 20px;border-radius:10px;margin-bottom:25px;display:flex;align-items:center;gap:14px;flex-wrap:wrap}
+.topbar h1{color:#17a65a;font-size:22px;flex:1}
+.topbar small{color:#777}
+.back-btn{background:#fff;color:#17a65a;border:2px solid #17a65a;padding:9px 16px}
+.back-btn:hover{background:#17a65a;color:#fff}
+.page{display:none}.page.active{display:block}
+.cards{display:grid;grid-template-columns:repeat(3,1fr);gap:20px;max-width:800px;margin:0 auto 28px}
+.cards .card{text-align:center}
+.card,.panel{background:#fff;padding:25px;border-radius:12px;box-shadow:0 3px 10px rgba(0,0,0,.07)}
+.card h3{color:#666;margin-bottom:10px;font-size:15px}
+.card .number{font-size:32px;font-weight:bold;color:#17a65a}
+.panel h2{color:#17a65a;margin-bottom:16px}
+.muted{color:#777}
+/* buildings */
+.building-header{text-align:center;font-size:22px;font-weight:bold;letter-spacing:1px;margin-bottom:28px;text-transform:uppercase}
+.building-menu{display:flex;flex-direction:column;gap:20px;max-width:800px;margin:0 auto}
+.building-card{background:#fff;border:2px solid #17a65a;border-radius:12px;padding:30px 25px;min-height:110px;display:flex;align-items:center;justify-content:center;text-align:center;cursor:pointer;box-shadow:0 3px 10px rgba(0,0,0,.05);transition:all .2s}
+.building-card:hover{background:#f0fdf4;transform:translateY(-2px);box-shadow:0 6px 15px rgba(23,166,90,.15)}
+.building-card h2{color:#17a65a;font-size:20px;text-transform:uppercase;width:100%;text-align:center}
+.building-banner{border:2px solid #17a65a;background:#fff;padding:22px;border-radius:12px;text-align:center;margin-bottom:22px}
+.building-banner h1{font-size:24px;color:#17a65a;letter-spacing:1px}
+.filters{display:flex;gap:20px;margin-bottom:25px}
+.room-grid{display:grid;grid-template-columns:repeat(2,1fr);gap:22px}
+.room-card{border:1px solid #e0e0e0;background:#fff;border-radius:12px;min-height:170px;padding:20px;display:flex;flex-direction:column;justify-content:space-between;box-shadow:0 3px 10px rgba(0,0,0,.05);cursor:pointer;transition:all .2s}
+.room-card:hover{border-color:#17a65a;transform:translateY(-2px)}
+.room-card p{font-size:14px;margin-bottom:7px;font-weight:bold}
+.room-card p span{color:#17a65a}
+.detail-btn{align-self:flex-end;background:#17a65a;color:#fff;padding:7px 16px;font-size:12px}
+.detail-btn:hover{background:#0d8539}
+.card-btns{align-self:flex-end;display:flex;gap:8px;flex-wrap:wrap;justify-content:flex-end}
+.detail-btn.sched-btn{background:#fff;color:#17a65a;border:2px solid #17a65a}
+.detail-btn.sched-btn:hover{background:#17a65a;color:#fff}
+.sched-table td{padding:8px 12px;font-size:14px}
+.chips{display:flex;flex-wrap:wrap;gap:8px}
+.chip{background:#fff;border:1px solid #ccc;color:#333;padding:8px 14px;border-radius:20px;font-weight:normal;font-size:13px}
+.chip.on{background:#17a65a;border-color:#17a65a;color:#fff;font-weight:bold}
+.tt td{height:34px;min-width:70px;font-size:11px;border:1px solid #eee;text-align:center;padding:2px}
+.tt th{font-size:12px;padding:8px 6px}
+.tt .tt-c{background:#d4edda;color:#155724;font-weight:bold}
+.tt .tt-r{background:#fff3cd;color:#856404;font-weight:bold}
+.cancelled{background:#e2e3e5;color:#383d41}
+.notification{padding:14px;border-left:5px solid #17a65a;background:#f5f8ff;margin-bottom:12px;border-radius:5px;line-height:1.5}
+.sched-table th{padding:8px 12px;font-size:13px}
+.sched-table th:first-child,.sched-table td:first-child{width:56px;font-weight:bold}
+.sched-table td:last-child{border-left:2px solid #17a65a;font-weight:bold}
+/* modal */
+.modal-overlay{display:none;position:fixed;inset:0;background:rgba(0,0,0,.5);z-index:3000;justify-content:center;align-items:center}
+.modal{background:#fff;border-radius:15px;width:700px;max-width:92%;max-height:90vh;overflow-y:auto;padding:28px;position:relative}
+.close{position:absolute;top:16px;right:16px;width:38px;height:38px;padding:0;border-radius:50%;background:#dc3545;color:#fff;font-size:22px}
+.close:hover{background:#b91c1c}
+.info-box{border:1px solid #e0e0e0;background:#f9fbf9;border-radius:10px;padding:18px;margin:14px 0 20px;line-height:1.7;font-weight:bold}
+.info-box span{color:#17a65a}
+.sched-title{border-left:4px solid #17a65a;padding:3px 12px;font-weight:bold;color:#17a65a;margin-bottom:10px}
+.sched p{font-size:13px;color:#555;margin-bottom:6px}
+.form-grid{display:grid;grid-template-columns:1fr 1fr;gap:0 18px}
+.form-grid .full{grid-column:1/-1}
+/* tables + status */
+table{width:100%;border-collapse:collapse}
+th,td{padding:12px;text-align:left;border-bottom:1px solid #ddd;font-size:14px}
+th{background:#f1f5fb;color:#17a65a}
+.tbl{overflow-x:auto}
+.status{display:inline-block;padding:5px 10px;border-radius:15px;font-size:12px;font-weight:bold}
+.pending{background:#fff3cd;color:#856404}.approved{background:#d4edda;color:#155724}.rejected{background:#f8d7da;color:#721c24}
+.mini{padding:6px 12px;font-size:12px;margin-right:6px;color:#fff}
+.approve{background:#188038}.reject,.cancel{background:#d93025}
+#toast{position:fixed;bottom:24px;left:50%;transform:translateX(-50%);background:#106d3c;color:#fff;padding:12px 22px;border-radius:8px;display:none;z-index:4000}
+@media(max-width:700px){
+.toggle{display:flex}
+.content{margin-left:0;padding:76px 16px 24px}
+.room-grid,.form-grid{grid-template-columns:1fr}
+.cards{gap:10px}
+.cards .card{padding:16px 8px}
+.cards .card h3{font-size:12px}
+.cards .card .number{font-size:26px}
+.filters{flex-direction:column;gap:12px}
+}
+@media(prefers-reduced-motion:reduce){*{transition:none!important}}
+</style>
+</head>
+<body>
+
+<!-- LOGIN -->
+<div id="loginPage" class="auth" style="display:none"><div class="auth-box">
+<h1>Room Reserve</h1><p class="subtitle">Sign in to reserve a room</p>
+<label for="lEmail">Email</label><input id="lEmail" type="email" autocomplete="username">
+<label for="lPass">Password</label><input id="lPass" type="password" autocomplete="current-password">
+<div class="error" id="lErr"></div>
+<button class="primary-btn" onclick="login()">Log in</button>
+<p class="auth-link">No account? <button onclick="showAuth('signupPage')">Sign up</button></p>
+<p class="auth-link"><button onclick="showAuth('adminPage')">Admin login</button></p>
+<p class="auth-link"><button onclick="start()">Back to home</button></p>
+</div></div>
+
+<!-- SIGNUP -->
+<div id="signupPage" class="auth" style="display:none"><div class="auth-box">
+<h1>Create account</h1><p class="subtitle">Students and teachers can reserve rooms</p>
+<label for="sName">Full name</label><input id="sName">
+<label for="sEmail">Email</label><input id="sEmail" type="email">
+<label for="sPass">Password (6+ characters)</label><input id="sPass" type="password" autocomplete="new-password">
+<label for="sRole">I am a</label><select id="sRole"><option>Student</option><option>Teacher</option></select>
+<div class="error" id="sErr"></div>
+<button class="primary-btn" onclick="signup()">Create account</button>
+<p class="auth-link">Have an account? <button onclick="showAuth('loginPage')">Log in</button></p>
+<p class="auth-link"><button onclick="start()">Back to home</button></p>
+</div></div>
+
+<!-- ADMIN LOGIN -->
+<div id="adminPage" class="auth" style="display:none"><div class="auth-box">
+<h1>Admin</h1><p class="subtitle">For staff who manage room requests</p>
+<div id="aNameRow" style="display:none"><label for="aName">Full name</label><input id="aName"></div>
+<label for="aEmail">Email</label><input id="aEmail" type="email" autocomplete="username">
+<label for="aPass">Password</label><input id="aPass" type="password" autocomplete="current-password">
+<div id="aCodeRow" style="display:none"><label for="aCode">Admin code</label><input id="aCode" type="password"></div>
+<div class="error" id="aErr"></div>
+<button class="primary-btn" id="aBtn" onclick="adminSubmit()">Log in as admin</button>
+<p class="auth-link"><button id="aToggle" onclick="adminToggle()">Create admin account</button></p>
+<p class="auth-link"><button onclick="showAuth('loginPage')">User login</button> &nbsp;·&nbsp; <button onclick="start()">Back to home</button></p>
+</div></div>
+
+<!-- APP -->
+<div id="app">
+<button class="toggle" onclick="document.getElementById('app').classList.toggle('collapsed')" aria-label="Toggle menu"><span></span><span></span><span></span></button>
+<nav class="sidebar">
+<h2>Room Reserve</h2>
+<button class="nav" data-p="buildings" onclick="go('buildings')">Home</button>
+<button class="nav" data-p="find" id="findNav" onclick="go('find')">Find a room</button>
+<button class="nav" data-p="tt" onclick="go('tt')">Timetable</button>
+<button class="nav" data-p="mine" id="mineNav" onclick="go('mine')">My reservations</button>
+<button class="nav" data-p="pending" id="pendNav" onclick="go('pending')">Pending requests</button>
+<button class="nav" data-p="admin" id="adminNav" onclick="go('admin')">All reservations</button>
+<button class="nav" data-p="manage" id="manNav" onclick="go('manage')">Rooms &amp; classes</button>
+<button class="nav" data-p="notes" id="notesNav" onclick="go('notes')">Notifications</button>
+<button class="logout" id="authBtn" onclick="authAction()">Log out</button>
+</nav>
+<main class="content">
+<div class="topbar">
+<button class="back-btn" id="backBtn" onclick="back()">&larr; Back</button>
+<h1 id="title">Home</h1><small id="who"></small>
+</div>
+
+<section class="page" id="pg-buildings">
+<div class="cards" id="stats"></div>
+<div class="building-menu" id="bMenu"></div>
+</section>
+
+<section class="page" id="pg-rooms">
+<div class="building-banner"><h1 id="bName"></h1></div>
+<div class="filters">
+<input id="q" placeholder="Search room name" oninput="renderRooms()" aria-label="Search rooms">
+<select id="tf" onchange="renderRooms()" aria-label="Filter by type"><option value="">All room types</option><option>Classroom</option><option>Laboratory</option><option>Meeting Room</option><option>Gym</option></select>
+<select id="ff" onchange="renderRooms()" aria-label="Filter by floor"></select>
+</div>
+<div class="room-grid" id="roomGrid"></div>
+</section>
+
+<section class="page" id="pg-mine"><div class="panel"><h2>My reservations</h2><div class="tbl" id="mineTbl"></div></div></section>
+<section class="page" id="pg-find"><div class="panel"><h2>Find a free room</h2>
+<div class="form-grid"><div><label for="fDate">Date</label><input type="date" id="fDate"></div><div><label for="fPeople">Number of people</label><input type="number" id="fPeople" min="1"></div>
+<div><label for="fStart">Start time</label><input type="time" id="fStart"></div><div><label for="fEnd">End time</label><input type="time" id="fEnd"></div></div>
+<button class="primary-btn" onclick="findRooms()">Search free rooms</button></div><div id="fOut"></div></section>
+<section class="page" id="pg-tt"><div class="panel"><h2>Weekly timetable</h2><label for="ttRoom">Room</label><select id="ttRoom" onchange="renderTT()"></select>
+<p class="muted" style="margin:10px 0">Green = class every week · Yellow = approved reservation this week</p><div class="tbl" id="ttGrid"></div></div></section>
+<section class="page" id="pg-pending"><div class="panel"><h2>Pending requests</h2><p class="muted" style="margin-bottom:14px">New reservations waiting for your approval.</p><div class="tbl" id="pendTbl"></div></div></section>
+<section class="page" id="pg-admin"><div class="panel"><h2>All reservations</h2>
+<div class="filters"><input id="aq" placeholder="Search room, name or purpose" oninput="renderAdmin()" aria-label="Search"><select id="as" onchange="renderAdmin()" aria-label="Filter by status"><option value="">All status</option><option>pending</option><option>approved</option><option>rejected</option><option>cancelled</option></select><button class="reserve-action-btn" onclick="exportCsv()">Export CSV</button></div>
+<div class="tbl" id="adminTbl"></div></div></section>
+<section class="page" id="pg-manage">
+<div class="panel"><h2>Add room</h2><div class="form-grid"><div><label for="aB">Building</label><select id="aB"></select></div><div><label for="nName">Room name</label><input id="nName" placeholder="e.g. NB 101"></div>
+<div><label for="nType">Type</label><select id="nType"><option>Classroom</option><option>Laboratory</option><option>Meeting Room</option><option>Gym</option></select></div><div><label for="nCap">Capacity</label><input type="number" id="nCap" min="1"></div></div>
+<button class="primary-btn" onclick="addRoom()">Add room</button><div class="tbl" id="xRooms" style="margin-top:18px"></div><div class="tbl" id="goneRooms" style="margin-top:18px"></div></div>
+<div class="panel"><h2>Add class schedule</h2><div class="form-grid"><div class="full"><label for="cRoom">Room</label><select id="cRoom"></select></div>
+<div><label for="cDay">Day</label><select id="cDay"><option value="1">Monday</option><option value="2">Tuesday</option><option value="3">Wednesday</option><option value="4">Thursday</option><option value="5">Friday</option><option value="6">Saturday</option></select></div>
+<div><label for="cKind">Type</label><select id="cKind"><option>Lecture</option><option>Laboratory</option></select></div>
+<div><label for="cStart">Start</label><input type="time" id="cStart"></div><div><label for="cEnd">End</label><input type="time" id="cEnd"></div>
+<div><label for="cSub">Subject</label><input id="cSub" placeholder="e.g. MATH101"></div><div><label for="cSec">Section</label><input id="cSec" placeholder="e.g. 2BSA-A"></div></div>
+<button class="primary-btn" onclick="addClass()">Add class</button><div class="tbl" id="xClasses" style="margin-top:18px"></div></div>
+</section>
+<section class="page" id="pg-notes"><div class="panel"><h2>Notifications</h2><div id="notesList"></div></div></section>
+</main>
+</div>
+
+<!-- ROOM MODAL -->
+<div class="modal-overlay" id="modal" onclick="if(event.target===this)closeModal()">
+<div class="modal" role="dialog" aria-modal="true">
+<button class="close" onclick="closeModal()" aria-label="Close">&times;</button>
+<div id="modalBody"></div>
+</div></div>
+<div id="toast"></div>
+
+<script>
+const BUILDINGS=["Main Building","Nursing Building","Bagong Cabuyao Hall Building"]; // building names
+const PREFIX=["M","N","B"]; // room code prefix for each building
+const $=id=>document.getElementById(id);
+const esc=s=>String(s).replace(/[&<>"']/g,c=>({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'}[c]));
+const load=(k,d)=>{try{const v=JSON.parse(localStorage.getItem(k));return v==null?d:v}catch(e){return d}};
+const save=(k,v)=>{try{localStorage.setItem(k,JSON.stringify(v))}catch(e){}};
+
+let users=load('rr_users',[]); // no built-in admin: the first account created becomes the admin
+let res=load('rr_res',[]);
+let me=load('rr_me',null);
+const ADMIN_CODE='RR-ADMIN-2026'; // CHANGE THIS: the secret code needed to create an admin account
+let notes=load('rr_notes',[]);
+const notify=(to,msg)=>{notes.unshift({id:Date.now()+Math.random(),to,msg,t:new Date().toLocaleString('en-PH'),seen:false});save('rr_notes',notes)};
+const live=x=>x.status==='pending'||x.status==='approved';
+let adminMode='login';
+const X=load('rr_x',{rooms:[],classes:[]});
+X.gone=X.gone||[]; // rooms the admin removed (kept so old reservations still show a room name) // rooms and classes added by the admin
+let hist=[],cur='buildings',curB=0;
+const iso=d=>d.getFullYear()+'-'+String(d.getMonth()+1).padStart(2,'0')+'-'+String(d.getDate()).padStart(2,'0');
+const todayStr=()=>{const d=new Date();return d.getFullYear()+'-'+String(d.getMonth()+1).padStart(2,'0')+'-'+String(d.getDate()).padStart(2,'0')};
+
+const types=['Classroom','Laboratory','Meeting Room'],equip=['Projector','Computers','Video conference','Lab equipment','Smart TV'];
+const EQUIP_OPTIONS=['TV','Projector','Projector screen','Microphone','Speaker','HDMI cable','Extension cord','Laptop']; // what a professor can request
+const rooms=[];
+const ord=n=>n===1?'Ground floor':n+(n===2?'nd':n===3?'rd':'th')+' floor';
+BUILDINGS.forEach((b,bi)=>{
+  if(bi===2){ // Bagong Cabuyao Hall: BCH 101-110 (ground) up to BCH 501-510 (5th floor), all classrooms
+    for(let f=1;f<=5;f++)for(let n=1;n<=10;n++){const num=f*100+n;rooms.push({id:bi+'-'+num,b:bi,name:'BCH '+num,floor:f,type:'Classroom',cap:40,eq:''})}
+    return;
+  }
+  for(let i=0;i<6;i++){const fl=Math.floor(i/3)+1;rooms.push({id:bi+'-'+i,b:bi,name:String.fromCharCode(65+bi)+'-'+fl+'0'+(i%3+1),floor:fl,type:types[i%3],cap:[40,24,12][i%3]+bi*4,eq:equip[(i+bi)%equip.length]})}
+});
+[['COMLAB 4','Laboratory',30,'Computers'],['COMLAB 5','Laboratory',30,'Computers'],['GYM1','Gym',100,'Sports equipment'],['309','Classroom',40,''],['303','Classroom',40,'']].forEach(([n,t,c,e])=>rooms.push({id:'0-'+n.replace(/ /g,'').toLowerCase(),b:0,name:n,floor:1,type:t,cap:c,eq:e}));
+X.rooms.forEach(r=>rooms.push(r));
+const room=id=>rooms.find(r=>r.id===id)||X.gone.find(r=>r.id===id);
+
+/* ---------- weekly class schedule (repeats every week) ---------- */
+const DAYS=['Sunday','Monday','Tuesday','Wednesday','Thursday','Friday','Saturday'];
+// [room name, day (1=Mon ... 6=Sat), start 24h, end 24h, class, optional section]
+const SCHEDULE=[
+['BCH 207',1,'08:30','09:30','RIZ101 (Lecture)'],
+['GYM1',3,'17:30','19:00','PED103 (Lecture)'],
+['BCH 106',5,'17:30','19:00','COE101 (Lecture)'],
+['BCH 302',6,'10:30','13:30','CPP123 (Lecture)'],
+['BCH 303',6,'17:30','20:30','ENT101 (Lecture)'],
+['BCH 207',1,'07:00','08:30','RIZ101 (Lecture)','2BSA-A'],
+['COMLAB 5',1,'13:00','16:00','CPP108 (Laboratory)','2CPE-B'],
+['309',2,'10:00','11:30','ENT101 (Lecture)','2IT-A'],
+['BCH 303',2,'11:30','13:00','CPP108 (Lecture)','2CPE-B'],
+['GYM1',2,'15:00','16:30','PED103 (Lecture)','2IT-B'],
+['BCH 503',2,'17:30','19:00','COE101 (Lecture)','1CPE-D'],
+['COMLAB 4',3,'13:30','16:30','COE110 (Laboratory)','2CPE-B'],
+['BCH 207',4,'07:00','08:30','RIZ101 (Lecture)','2BSA-A'],
+['309',5,'10:00','11:30','ENT101 (Lecture)','2IT-A'],
+['BCH 303',5,'11:30','13:00','CPP108 (Lecture)','2CPE-B'],
+['BCH 101',5,'13:00','16:00','HMN101 (Lecture)','2BSN-B'],
+['BCH 503',5,'17:30','19:00','COE101 (Lecture)','1CPE-D'],
+['BCH 302',6,'07:00','10:00','CPP123 (Lecture)','2CPE-B'],
+['BCH 410',6,'13:30','16:30','HIS101 (Lecture)','2BAM-B'],
+['309',1,'10:00','11:30','ENT101 (Lecture)','2CS-C'],
+['BCH 505',2,'07:00','08:30','HMN101 (Lecture)','1IT-B'],
+['BCH 310',2,'14:30','16:00','SOC101 (Lecture)','1SEDE-B'],
+['303',3,'08:30','11:30','COE101 (Lecture)','1CPE-C'],
+['309',4,'10:00','11:30','ENT101 (Lecture)','2CS-C'],
+['BCH 505',5,'07:00','08:30','HMN101 (Lecture)','1IT-B'],
+['BCH 310',5,'14:30','16:00','SOC101 (Lecture)','1SEDE-B'],
+['GYM1',6,'10:00','11:30','PED103 (Lecture)','2CS-B'],
+['BCH 108',4,'14:30','17:30','HIS101 (Lecture)','1SEDE-B']
+];
+const SECTION='2BSA-A'; // default section; add a 6th value to a row to use a different section
+const classes=SCHEDULE.map(([n,day,start,end,label,sec=SECTION])=>({room:rooms.find(r=>r.name.toLowerCase()===n.toLowerCase()).id,day,start,end,label:label+', '+sec,section:sec,...(m=>({subject:m?m[1]:label,kind:m?m[2]:''}))(label.match(/^(.*?)\s*\((.*)\)$/))}));
+X.classes.forEach(c=>classes.push(c));
+{const gone=new Set(X.gone.map(r=>r.id));
+ for(let i=rooms.length;i--;)if(gone.has(rooms[i].id))rooms.splice(i,1);
+ for(let i=classes.length;i--;)if(gone.has(classes[i].room))classes.splice(i,1)}
+const fmt=t=>{const [h,m]=t.split(':').map(Number);return (h%12||12)+':'+String(m).padStart(2,'0')+(h<12?' AM':' PM')};
+const DL=['Su','M','T','W','Th','F','S']; // day letters (Th = Thursday so it is not confused with T = Tuesday)
+const range=(s,e)=>{const f=t=>{const [h,m]=t.split(':').map(Number);return [(h%12||12)+':'+String(m).padStart(2,'0'),h<12?'AM':'PM']};const [a,p]=f(s),[b,q]=f(e);return p===q?a+'-'+b+' '+q:a+' '+p+'-'+b+' '+q};
+function busyNow(id){
+  const d=new Date(),t=String(d.getHours()).padStart(2,'0')+':'+String(d.getMinutes()).padStart(2,'0');
+  const c=classes.find(x=>x.room===id&&x.day===d.getDay()&&x.start<=t&&t<x.end);
+  if(c)return 'In class: '+c.label;
+  return res.some(x=>x.room===id&&live(x)&&x.date===todayStr()&&x.start<=t&&t<x.end)?'Reserved':null;
+}
+const statusLine=id=>{const b=busyNow(id);return b?`<p>Now: <span style="color:#d93025">${esc(b)}</span></p>`:''};
+
+/* ---------- auth ---------- */
+function showAuth(id){['loginPage','signupPage','adminPage'].forEach(p=>$(p).style.display=p===id?'flex':'none');$('lErr').textContent=$('sErr').textContent=$('aErr').textContent=''}
+const sha=async t=>{t='rr1:'+t;if(!(window.crypto&&crypto.subtle))return 'x'+[...t].reduce((h,c)=>(h*31+c.charCodeAt(0))>>>0,7);return [...new Uint8Array(await crypto.subtle.digest('SHA-256',new TextEncoder().encode(t)))].map(b=>b.toString(16).padStart(2,'0')).join('')};
+async function signup(){
+  const name=$('sName').value.trim(),email=$('sEmail').value.trim().toLowerCase(),pass=$('sPass').value,role=$('sRole').value;
+  if(!name||!email||pass.length<6){$('sErr').textContent='Enter your name, an email and a password of 6+ characters.';return}
+  if(users.some(u=>u.email===email)){$('sErr').textContent='That email already has an account. Log in instead.';return}
+  users.push({name,email,hash:await sha(email+pass),role:role==='Teacher'?'Teacher':'Student'});save('rr_users',users);
+  $('lEmail').value=email;showAuth('loginPage');
+}
+async function login(){
+  const email=$('lEmail').value.trim().toLowerCase(),pass=$('lPass').value,h=await sha(email+pass);
+  const u=users.find(u=>u.email===email&&(u.hash?u.hash===h:u.pass===pass));
+  if(!u){$('lErr').textContent='Email or password is incorrect.';return}
+  if(u.role==='Admin'){$('lErr').textContent='This is an admin account. Use Admin login.';return}
+  if(!u.hash){u.hash=h;delete u.pass;save('rr_users',users)}
+  me={name:u.name,email:u.email,role:u.role};save('rr_me',me);start();
+}
+function adminForm(){const c=adminMode==='create';$('aNameRow').style.display=$('aCodeRow').style.display=c?'block':'none';$('aBtn').textContent=c?'Create admin account':'Log in as admin';$('aToggle').textContent=c?'Back to admin login':'Create admin account'}
+function adminToggle(){adminMode=adminMode==='create'?'login':'create';adminForm();$('aErr').textContent=''}
+async function adminSubmit(){
+  const email=$('aEmail').value.trim().toLowerCase(),pass=$('aPass').value,err=$('aErr');
+  if(adminMode==='create'){
+    const name=$('aName').value.trim();
+    if(!name||!email||pass.length<6){err.textContent='Enter a name, an email and a password of 6+ characters.';return}
+    if($('aCode').value!==ADMIN_CODE){err.textContent='Wrong admin code.';return}
+    if(users.some(u=>u.email===email)){err.textContent='That email already has an account.';return}
+    users.push({name,email,hash:await sha(email+pass),role:'Admin'});save('rr_users',users);
+    adminMode='login';adminForm();err.textContent='Admin account created. Log in now.';return;
+  }
+  const h=await sha(email+pass),u=users.find(u=>u.role==='Admin'&&u.email===email&&(u.hash?u.hash===h:u.pass===pass));
+  if(!u){err.textContent='Admin email or password is incorrect.';return}
+  if(!u.hash){u.hash=h;delete u.pass;save('rr_users',users)}
+  me={name:u.name,email:u.email,role:'Admin'};save('rr_me',me);start();
+}
+function logout(){me=null;save('rr_me',null);$('lPass').value='';start()}
+function openAuth(){$('app').style.display='none';showAuth('loginPage')}
+function authAction(){me?logout():openAuth()}
+function start(){
+  $('loginPage').style.display=$('signupPage').style.display='none';
+  $('app').style.display='block';
+  $('who').textContent=me?me.name+' ('+me.role+')':'Guest';
+  const A=!!me&&me.role==='Admin';
+  ['pendNav','adminNav','manNav'].forEach(i=>$(i).style.display=A?'block':'none');
+  $('findNav').style.display=A?'none':'block';
+  $('mineNav').style.display=me&&!A?'block':'none';
+  $('notesNav').style.display=me?'block':'none';
+  $('authBtn').textContent=me?'Log out':'Log in';
+  $('authBtn').style.setProperty('background',me?'#d93025':'#17a65a','important');
+  hist=[];go(A?'pending':'buildings',0,false);
+  if(A){const p=res.filter(r=>r.status==='pending').length;if(p)toast('You have '+p+' pending request'+(p>1?'s':''))}
+}
+
+/* ---------- navigation ---------- */
+function go(p,b,push){
+  const A=!!me&&me.role==='Admin';
+  if((['pending','admin','manage'].includes(p)&&!A)||(p==='mine'&&(!me||A))||(p==='find'&&A)||(p==='notes'&&!me))p='buildings';
+  if(push!==false&&cur&&(p!==cur||b!==curB))hist.push([cur,curB]);
+  cur=p;curB=b==null?curB:b;
+  if(window.matchMedia('(max-width:700px)').matches)$('app').classList.add('collapsed'); // phone: menu stays closed until the ☰ button is tapped
+  render();window.scrollTo(0,0);
+}
+function back(){const h=hist.pop();if(h)go(h[0],h[1],false)}
+function render(){
+  document.querySelectorAll('.page').forEach(e=>e.classList.remove('active'));
+  $('pg-'+cur).classList.add('active');
+  document.querySelectorAll('.nav').forEach(n=>n.classList.toggle('on',n.dataset.p===cur));
+  $('backBtn').style.display=hist.length?'':'none';
+  const titles={buildings:'Home',rooms:BUILDINGS[curB],mine:'My reservations',find:'Find a room',tt:'Timetable',pending:'Pending requests',admin:'All reservations',manage:'Rooms & classes',notes:'Notifications'};
+  $('title').textContent=titles[cur];
+  if(cur==='buildings'){renderStats();$('bMenu').innerHTML=BUILDINGS.map((b,i)=>`<div class="building-card" tabindex="0" role="button" onclick="go('rooms',${i})" onkeydown="if(event.key==='Enter')go('rooms',${i})"><h2>${esc(b)}</h2></div>`).join('')}
+  if(cur==='rooms'){
+    $('bName').textContent=BUILDINGS[curB];$('q').value='';$('tf').value='';$('tf').style.display=curB===2?'none':''; // BCH is all classrooms, so no type filter
+    $('ff').innerHTML=`<option value="">${curB===2?'All room':'All floors'}</option>`+[...new Set(rooms.filter(r=>r.b===curB).map(r=>r.floor))].map(f=>`<option value="${f}">${ord(f)}</option>`).join('');
+    renderRooms();
+  }
+  if(cur==='mine')renderMine();
+  if(cur==='admin')renderAdmin();
+  if(cur==='pending')renderPending();
+  if(cur==='manage')renderManage();
+  if(cur==='notes')renderNotes();
+  if(cur==='find')initFind();
+  if(cur==='tt')renderTT();
+  badges();
+}
+
+/* ---------- pages ---------- */
+const st=s=>`<span class="status ${s}">${s[0].toUpperCase()+s.slice(1)}</span>`;
+const when=r=>`${esc(r.date)}, ${esc(r.start)}–${esc(r.end)}`;
+function renderStats(){
+  const avail=rooms.filter(r=>!busyNow(r.id)).length;
+  const t=todayStr(),reserved=new Set(res.filter(x=>x.status==='approved'&&x.date>=t).map(x=>x.room)).size;
+  $('stats').innerHTML=[['Room available',avail],['Total of room',rooms.length],['All reserved room',reserved]].map(([l,n])=>`<div class="card"><h3>${l}</h3><div class="number">${n}</div></div>`).join('');
+}
+function table(h,rows){return `<table><thead><tr>${h.map(x=>`<th>${x}</th>`).join('')}</tr></thead><tbody>${rows.map(r=>`<tr>${r.map(c=>`<td>${c}</td>`).join('')}</tr>`).join('')}</tbody></table>`}
+function renderRooms(){
+  const q=$('q').value.trim().toLowerCase(),t=$('tf').value,f=$('ff').value;
+  const list=rooms.filter(r=>r.b===curB&&(!t||r.type===t)&&(!f||String(r.floor)===f)&&(!q||r.name.toLowerCase().includes(q)));
+  $('roomGrid').innerHTML=list.length?list.map(r=>`<div class="room-card" tabindex="0" onclick="openRoom('${r.id}')" onkeydown="if(event.key==='Enter')openRoom('${r.id}')">
+    <div><p>Room: <span>${r.name}</span></p><p>Type: <span>${r.type}</span></p><p>Capacity: <span>${r.cap}</span></p>${statusLine(r.id)}</div>
+    <div class="card-btns"><button class="detail-btn sched-btn" onclick="event.stopPropagation();openSchedule('${r.id}')">Class schedule</button><button class="detail-btn">View details</button>${me&&me.role==='Admin'?`<button class="detail-btn" style="background:#d93025" onclick="event.stopPropagation();delRoom('${r.id}')">Remove</button>`:''}</div></div>`).join(''):'<p class="muted">No rooms match your search.</p>';
+}
+function renderMine(){
+  const mine=res.filter(r=>r.user===me.email);
+  $('mineTbl').innerHTML=mine.length?table(['Room','When','Purpose','Equipment','Status','Feedback',''],mine.map(r=>[esc(room(r.room).name),when(r),esc(r.purpose),esc((r.equipment||[]).join(', ')||'—'),st(r.status)+(!r.seen&&r.status!=='pending'?' <b style="color:#17a65a">NEW</b>':''),esc(r.note||'—'),live(r)?`<button class="mini cancel" onclick="userCancel(${r.id})">Cancel</button>`:''])):'<p class="muted">You have no reservations yet.</p>';
+  mine.forEach(r=>{if(r.status!=='pending')r.seen=true});save('rr_res',res);
+}
+const adminHead=['Room','When','By','Purpose','People','Equipment','Status','Action'];
+const adminRows=l=>l.map(r=>[esc(room(r.room).name),when(r),esc(r.name),esc(r.purpose),esc(r.people||'—'),esc((r.equipment||[]).join(', ')||'—'),st(r.status)+(r.note?'<br><small>'+esc(r.note)+'</small>':''),
+  r.status==='pending'?`<button class="mini approve" onclick="decide(${r.id},'approved')">Approve</button><button class="mini reject" onclick="decide(${r.id},'rejected')">Reject</button>`:r.status==='approved'?`<button class="mini cancel" onclick="adminCancel(${r.id})">Cancel</button>`:'']);
+function renderPending(){const l=res.filter(r=>r.status==='pending');$('pendTbl').innerHTML=l.length?table(adminHead,adminRows(l)):'<p class="muted">No pending requests right now.</p>'}
+function renderAdmin(){
+  const q=$('aq').value.trim().toLowerCase(),sf=$('as').value;
+  const l=res.filter(r=>(!sf||r.status===sf)&&(!q||[room(r.room).name,r.name,r.purpose].join(' ').toLowerCase().includes(q)));
+  $('adminTbl').innerHTML=l.length?table(adminHead,adminRows(l)):'<p class="muted">No reservations found.</p>';
+}
+function fillAdminSelects(){
+  const b=$('aB'),r=$('cRoom'),bv=b.value,rv=r.value;
+  b.innerHTML=BUILDINGS.map((n,i)=>`<option value="${i}">${esc(n)}</option>`).join('');
+  r.innerHTML=BUILDINGS.map((n,i)=>`<optgroup label="${esc(n)}">${rooms.filter(x=>x.b===i).map(x=>`<option value="${x.id}">${esc(x.name)}</option>`).join('')}</optgroup>`).join('');
+  if(bv)b.value=bv;if(rv)r.value=rv;
+}
+function renderManage(){
+  fillAdminSelects();
+  const added=X.rooms.filter(r=>!X.gone.some(g=>g.id===r.id));
+  $('goneRooms').innerHTML=X.gone.length?table(['Removed rooms','Building',''],X.gone.map(r=>[esc(r.name),esc(BUILDINGS[r.b]),`<button class="mini approve" onclick="restoreRoom('${r.id}')">Restore</button>`])):'';
+  $('xRooms').innerHTML=added.length?table(['Added rooms','Building','Type','Capacity',''],added.map(r=>[esc(r.name),esc(BUILDINGS[r.b]),r.type,r.cap,`<button class="mini cancel" onclick="delRoom('${r.id}')">Remove</button>`])):'<p class="muted">No rooms added yet.</p>';
+  $('xClasses').innerHTML=X.classes.length?table(['Added classes','Day','Time',''],X.classes.map((c,i)=>[esc((room(c.room)||{name:'?'}).name+' · '+c.label),DAYS[c.day],range(c.start,c.end),`<button class="mini cancel" onclick="delClass(${i})">Remove</button>`])):'<p class="muted">No classes added yet.</p>';
+}
+function delRoom(id){
+  const r=room(id);
+  if(res.some(x=>x.room===id&&live(x))){toast('Cancel or reject this room\'s active reservations first');return}
+  if(!confirm('Remove '+r.name+' ('+BUILDINGS[r.b]+')? Its class schedule is removed too.'))return;
+  for(let i=classes.length;i--;)if(classes[i].room===id)classes.splice(i,1);
+  rooms.splice(rooms.findIndex(x=>x.id===id),1);X.gone.push(r);save('rr_x',X);render();toast('Room removed');
+}
+function restoreRoom(id){X.gone=X.gone.filter(g=>g.id!==id);save('rr_x',X);location.reload()}
+function delClass(i){const c=X.classes[i];if(!confirm('Remove this class?'))return;classes.splice(classes.indexOf(c),1);X.classes.splice(i,1);save('rr_x',X);renderManage()}
+function renderNotes(){
+  const to=me.role==='Admin'?'admin':me.email,mine=notes.filter(n=>n.to===to);
+  $('notesList').innerHTML=mine.length?mine.map(n=>`<div class="notification">${n.seen?'':'<b style="color:#17a65a">NEW </b>'}${esc(n.msg)}<br><small class="muted">${esc(n.t)}</small></div>`).join(''):'<p class="muted">No notifications yet.</p>';
+  mine.forEach(n=>{n.seen=true});save('rr_notes',notes);
+}
+function badges(){
+  if(!me)return;const A=me.role==='Admin',u=notes.filter(n=>n.to===(A?'admin':me.email)&&!n.seen).length;
+  $('notesNav').textContent='Notifications'+(u?' ('+u+')':'');
+  if(A){const p=res.filter(r=>r.status==='pending').length;$('pendNav').textContent='Pending requests'+(p?' ('+p+')':'')}
+}
+const ask=m=>{const v=prompt(m);if(v===null)return null;if(!v.trim()){toast('Please write a short reason');return null}return v.trim()};
+const desc=r=>room(r.room).name+' on '+r.date+' ('+range(r.start,r.end)+')';
+function decide(id,s){
+  const r=res.find(x=>x.id===id);let note='';
+  if(s==='rejected'){note=ask('Why are you rejecting this request? (the requester will see this)');if(note===null)return}
+  r.status=s;r.note=note;r.seen=false;save('rr_res',res);
+  notify(r.user,'Your reservation for '+desc(r)+' was '+s+'.'+(note?' Reason: '+note:''));
+  toast('Request '+s);render();
+}
+function adminCancel(id){
+  const r=res.find(x=>x.id===id),note=ask('Why are you cancelling this approved reservation? (the requester will see this)');if(note===null)return;
+  r.status='cancelled';r.note=note;r.seen=false;save('rr_res',res);
+  notify(r.user,'Your approved reservation for '+desc(r)+' was cancelled by the admin. Reason: '+note);
+  toast('Reservation cancelled');render();
+}
+function userCancel(id){
+  if(!confirm('Cancel this reservation?'))return;
+  const r=res.find(x=>x.id===id),was=r.status;r.status='cancelled';r.note='Cancelled by you';r.seen=true;save('rr_res',res);
+  if(was==='approved')notify('admin',r.name+' cancelled the approved reservation for '+desc(r)+'.');
+  toast('Reservation cancelled');render();
+}
+
+/* ---------- modal + booking ---------- */
+function openRoom(id){
+  const r=room(id),today=todayStr();
+  $('modalBody').innerHTML=`<h2 style="color:#17a65a;padding-right:44px">${esc(BUILDINGS[r.b])} · Room ${r.name}</h2>
+  <div class="info-box">Type: <span>${r.type}</span><br>Capacity: <span>${r.cap} people</span>${r.eq?`<br>Equipment: <span>${r.eq}</span>`:''}</div>
+  <button class="reserve-action-btn" onclick="openReserved('${id}')">Reserved room</button>
+  <div class="sched-title" style="margin-top:22px">Reserve this room</div>
+  ${me&&me.role==='Admin'?`<p class="muted" style="margin:8px 0">Admins manage requests and cannot reserve rooms. Use a teacher or student account to reserve.</p>`:me?`<div class="form-grid">
+  <div class="full"><label for="rDate">Date</label><input type="date" id="rDate" min="${today}"></div>
+  <div><label for="rStart">Start time</label><input type="time" id="rStart"></div>
+  <div><label for="rEnd">End time</label><input type="time" id="rEnd"></div>
+  <div class="full"><label>Equipment needed (optional)</label><div class="chips" id="eqChips">${EQUIP_OPTIONS.map(o=>`<button type="button" class="chip" aria-pressed="false" onclick="this.classList.toggle('on');this.setAttribute('aria-pressed',this.classList.contains('on'))">${o}</button>`).join('')}</div></div>
+  <div class="full"><label for="rPeople">Number of people</label><input type="number" id="rPeople" min="1" max="${r.cap}" placeholder="Up to ${r.cap}"></div>
+  <div class="full"><label for="rPurpose">Purpose</label><textarea id="rPurpose" placeholder="Class, club meeting, exam review…"></textarea></div>
+  </div>
+  <div class="error" id="rErr"></div>
+  <button class="primary-btn" onclick="reserve('${id}')">Send reservation request</button>`:`<p class="muted" style="margin:8px 0">Log in to reserve this room.</p><button class="primary-btn" onclick="closeModal();openAuth()">Log in</button>`}`;
+  $('modal').style.display='flex';
+}
+function openReserved(id){
+  const r=room(id),booked=res.filter(x=>x.room===id&&live(x)).sort((a,b)=>(a.date+a.start).localeCompare(b.date+b.start));
+  const dt=d=>new Date(d+'T00:00:00').toLocaleDateString('en-PH',{month:'short',day:'numeric',year:'numeric'});
+  $('modalBody').innerHTML=`<button class="back-btn" style="margin-bottom:14px" onclick="openRoom('${id}')">&larr; Back to details</button>
+  <h2 style="color:#17a65a;padding-right:44px">Reserved room</h2><p class="muted" style="margin:4px 0 18px">${esc(BUILDINGS[r.b])} · ${esc(r.name)}</p>`+
+  (booked.length?`<table class="sched-table"><thead><tr><th style="width:auto">Date</th><th>Time</th><th>Status</th></tr></thead><tbody>${booked.map(b=>`<tr><td style="width:auto">${dt(b.date)}</td><td style="font-weight:normal;border-left:0">${range(b.start,b.end)}</td><td style="border-left:0">${st(b.status)}</td></tr>`).join('')}</tbody></table>`:'<p class="muted">No reservations yet for this room.</p>');
+  $('modal').style.display='flex';
+}
+function openSchedule(id){
+  const r=room(id),list=classes.filter(x=>x.room===id).sort((a,b)=>a.day-b.day||a.start.localeCompare(b.start)),groups={};
+  list.forEach(c=>{(groups[c.section+' | '+c.kind]=groups[c.section+' | '+c.kind]||[]).push(c)});
+  $('modalBody').innerHTML=`<h2 style="color:#17a65a;padding-right:44px">Class schedule</h2><p class="muted" style="margin:4px 0 18px">${esc(BUILDINGS[r.b])} · ${esc(r.name)}</p>`+
+  (list.length?Object.keys(groups).map(k=>{const [sec,kind]=k.split(' | ');return `<div class="sched-title">Section: ${esc(sec)}${kind?' | '+esc(kind):''}</div>
+  <table class="sched-table" style="margin-bottom:20px"><thead><tr><th>Day</th><th>Time</th><th>Subject</th></tr></thead><tbody>${groups[k].map((c,i,a)=>(i&&a[i-1].day!==c.day?'<tr><td colspan="3" style="padding:6px;border:0"></td></tr>':'')+`<tr><td>${DL[c.day]}</td><td>${range(c.start,c.end)}</td><td>${esc(c.subject)}</td></tr>`).join('')}</tbody></table>`}).join(''):'<p class="muted">No classes in this room.</p>');
+  $('modal').style.display='flex';
+}
+function closeModal(){$('modal').style.display='none'}
+function reserve(id){
+  if(!me){closeModal();openAuth();return}
+  if(me.role==='Admin'){toast('Admins cannot reserve rooms');return}
+  const date=$('rDate').value,start=$('rStart').value,end=$('rEnd').value,purpose=$('rPurpose').value.trim(),err=$('rErr');
+  if(!date||!start||!end||!purpose){err.textContent='Fill in the date, both times and the purpose.';return}
+  if(date<todayStr()){err.textContent='Choose today or a future date.';return}
+  if(end<=start){err.textContent='End time must be after the start time.';return}
+  const people=+$('rPeople').value,rm=room(id),mins=t=>+t.slice(0,2)*60+ +t.slice(3);
+  if(!people||people<1){err.textContent='Enter how many people will use the room.';return}
+  if(people>rm.cap){err.textContent='This room only fits '+rm.cap+' people.';return}
+  if(mins(end)-mins(start)>180){err.textContent='A reservation can be 3 hours at most.';return}
+  if(date>iso(new Date(Date.now()+60*864e5))){err.textContent='You can reserve up to 60 days ahead.';return}
+  if(res.some(x=>x.room===id&&x.date===date&&live(x)&&start<x.end&&end>x.start)){err.textContent='This room is already booked at that time. Pick another time.';return}
+  const wd=new Date(date+'T00:00:00').getDay(),cc=classes.find(x=>x.room===id&&x.day===wd&&start<x.end&&end>x.start);
+  if(cc){err.textContent='This room has a class then: '+cc.label+', '+fmt(cc.start)+'–'+fmt(cc.end)+'. Pick another time.';return}
+  const equipment=[...document.querySelectorAll('#eqChips .chip.on')].map(b=>b.textContent);
+  res.push({id:Date.now(),room:id,date,start,end,purpose,people,equipment,user:me.email,name:me.name,status:'pending'});
+  save('rr_res',res);notify('admin',me.name+' requested '+rm.name+' on '+date+' ('+range(start,end)+'). Purpose: '+purpose);closeModal();toast('Request sent. An admin will review it.');go('mine');
+}
+function initFind(){if(!$('fDate').value){$('fDate').value=todayStr();$('fDate').min=todayStr()}}
+function findRooms(){
+  const date=$('fDate').value,start=$('fStart').value,end=$('fEnd').value,n=+$('fPeople').value||0,out=$('fOut');
+  if(!date||!start||!end||end<=start){out.innerHTML='<p class="error">Choose a date and a start time that is earlier than the end time.</p>';return}
+  const wd=new Date(date+'T00:00:00').getDay();
+  const free=rooms.filter(r=>r.cap>=n&&!classes.some(c=>c.room===r.id&&c.day===wd&&start<c.end&&end>c.start)&&!res.some(x=>x.room===r.id&&x.date===date&&live(x)&&start<x.end&&end>x.start));
+  out.innerHTML=free.length?`<p class="muted" style="margin-bottom:12px">${free.length} free room(s)</p><div class="room-grid">${free.map(r=>`<div class="room-card"><div><p>Room: <span>${esc(r.name)}</span></p><p>Building: <span>${esc(BUILDINGS[r.b])}</span></p><p>Type: <span>${r.type}</span></p><p>Capacity: <span>${r.cap}</span></p></div><div class="card-btns"><button class="detail-btn" onclick="openRoom('${r.id}')">Reserve</button></div></div>`).join('')}</div>`:'<p class="muted">No free room for that time.</p>';
+}
+function renderTT(){
+  const sel=$('ttRoom');
+  if(!sel.options||!sel.options.length)sel.innerHTML=BUILDINGS.map((b,i)=>`<optgroup label="${esc(b)}">${rooms.filter(r=>r.b===i).map(r=>`<option value="${r.id}">${esc(r.name)}</option>`).join('')}</optgroup>`).join('');
+  const id=sel.value||rooms[0].id,m=t=>+t.slice(0,2)*60+ +t.slice(3);
+  const d0=new Date();d0.setDate(d0.getDate()-((d0.getDay()+6)%7));
+  const dates=[0,1,2,3,4,5].map(i=>{const d=new Date(d0);d.setDate(d0.getDate()+i);return iso(d)});
+  const cell=(day,h)=>{
+    const a=h*60,b=a+60,c=classes.find(x=>x.room===id&&x.day===day&&m(x.start)<b&&m(x.end)>a);
+    if(c)return `<td class="tt-c">${m(c.start)>=a?esc(c.subject):''}</td>`;
+    const r=res.find(x=>x.room===id&&x.date===dates[day-1]&&x.status==='approved'&&m(x.start)<b&&m(x.end)>a);
+    return r?`<td class="tt-r">${m(r.start)>=a?'Reserved':''}</td>`:'<td></td>';
+  };
+  let h='<table class="tt"><thead><tr><th>Time</th>'+[1,2,3,4,5,6].map(d=>`<th>${DL[d]}</th>`).join('')+'</tr></thead><tbody>';
+  for(let t=7;t<=19;t++)h+=`<tr><th>${fmt(t+':00')}</th>${[1,2,3,4,5,6].map(d=>cell(d,t)).join('')}</tr>`;
+  $('ttGrid').innerHTML=h+'</tbody></table>';
+}
+function addRoom(){
+  const name=$('nName').value.trim(),cap=+$('nCap').value;
+  if(!name||!cap){toast('Enter the room name and capacity');return}
+  if(rooms.some(r=>r.name.toLowerCase()===name.toLowerCase())){toast('That room name already exists');return}
+  const r={id:'x-'+Date.now(),b:+$('aB').value,name,floor:1,type:$('nType').value,cap,eq:''};
+  rooms.push(r);X.rooms.push(r);save('rr_x',X);$('nName').value='';renderManage();toast('Room added');
+}
+function addClass(){
+  const subject=$('cSub').value.trim(),section=$('cSec').value.trim(),kind=$('cKind').value,start=$('cStart').value,end=$('cEnd').value;
+  if(!subject||!section||!start||!end||end<=start){toast('Fill in subject, section and a valid time');return}
+  const c={room:$('cRoom').value,day:+$('cDay').value,start,end,subject,kind,section,label:subject+' ('+kind+'), '+section};
+  classes.push(c);X.classes.push(c);save('rr_x',X);renderManage();toast('Class added');
+}
+async function exportCsv(){
+  const q=v=>'"'+String(v==null?'':v).replace(/"/g,'""')+'"';
+  const rows=[['Room','Building','Date','Start','End','Name','Email','Purpose','People','Equipment','Status','Note'],...res.map(r=>{const m=room(r.room);return [m.name,BUILDINGS[m.b],r.date,r.start,r.end,r.name,r.user,r.purpose,r.people||'',(r.equipment||[]).join('; '),r.status,r.note||'']})];
+  const csv=rows.map(r=>r.map(q).join(',')).join('\n');
+  try{const d=window.claude&&await claude.use('downloads');if(d){await d.save({filename:'reservations.csv',data:csv});return}}catch(e){if(e&&e.code==='declined')return}
+  const a=document.createElement('a');a.href=URL.createObjectURL(new Blob([csv],{type:'text/csv'}));a.download='reservations.csv';a.click();
+}
+function toast(m){const t=$('toast');t.textContent=m;t.style.display='block';clearTimeout(toast.t);toast.t=setTimeout(()=>t.style.display='none',2600)}
+document.addEventListener('keydown',e=>{if(e.key==='Escape')closeModal()});
+window.addEventListener('resize',()=>{if(window.innerWidth>700)$('app').classList.remove('collapsed')});
+if(me&&!users.some(u=>u.email===me.email)){me=null;save('rr_me',null)}
+start();
+</script>
+</body>
+</html>
